@@ -1,22 +1,49 @@
+# PRIMERA PARTE: Preprocesamiento de los datos
+
+# Carga de datos
 datos2014 <- read.csv('Incidentes_georreferenciados_2014.csv')
 datos2015 <- read.csv('Incidentes_georreferenciados_2015.csv')
 datos2016 <- read.csv('Incidentes_georreferenciados__2016.csv')
 datos2017 <- read.csv('Incidentes_georreferenciados_2017.csv')
 datos2018 <- read.csv('Incidentes_georreferenciados_2018.csv')
 
+# Juntamos datos de 2014 a 2017 y extraemos variables de interes
 tdatos <- rbind(datos2014, datos2015, datos2016, datos2017)
 train <- data.frame(tdatos$DIA, tdatos$PERIODO, tdatos$CLASE, tdatos$GRAVEDAD,
                     tdatos$COMUNA, tdatos$DISENO, tdatos$DIA_NOMBRE, tdatos$MES)
 names(train) <- c("DIA", "PERIODO", "CLASE", "GRAVEDAD", "COMUNA", "DISENO",
                   "DIA_NOMBRE", "MES")
 
-library(RcppBDT)
+# Funciones utiles
 dateString <- function(ano, mes, dia) {
-  return(as.Date(paste(ano, mes, dia, sep='-')))
+  return(paste(ano, mes, dia, sep='-'))
+}
+dateFromString <- function(ano, mes, dia) {
+  return(as.Date(dateString(ano, mes, dia)))
 }
 
-train$FECHA <- mapply(dateString, train$DIA, train$MES, train$PERIODO)
+# Filtrando con expresiones regulares
+library(tidyverse)
 
+filtroClase <- function(clase) {
+  if (str_detect(clase, regex('Ca.*da[:space:](de[:space:])?Ocupante'))) {
+    return('CaidaOcupante')
+  } else if (str_detect(clase, regex('Choque[:space:]?$'))) {
+    return('Choque')
+  } else {
+    return(clase)
+  }
+}
+tdatos$CLASE <- lapply(tdatos$CLASE, filtroClase)
+
+# Agrupamiento por tipo de accidente
+library(dplyr)
+tdatos %>%
+  group_by(CLASE) %>%
+  summarise(n = n()) -> train
+tdatos$CLASE
+
+library(RcppBDT)
 fechaEspecial <- function(esp, dia, mes, ano) {
   fecha <- switch(esp,
                   'padre'=getNthDayOfWeek(third, Sun, Jun, ano),
