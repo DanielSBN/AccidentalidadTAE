@@ -64,13 +64,18 @@ diaSemana <- function(ano, mes, dia) {
 }
 
 # Funcion para pre-procesamiento
-preprocesar <- function(datos) {
-  # Agrupamiento y limpieza por comunas
-  datos %>%
-    group_by(PERIODO, MES, DIA, NOMBRE_COM) %>%
-    summarise(ACCIDENTES = n()) -> train
-  colnames(train) <- c('ANO', 'MES', 'DIA', 'COMUNA', 'ACCIDENTES')
-  train <- train[!(train$COMUNA %in% c('', ' ') | str_detect(train$COMUNA, 'Corregimiento')),]
+preprocesar <- function(datos, prediccion) {
+  if (prediccion) {
+    # Copia de los datos
+    train <- data.frame(datos)
+  } else {
+    # Agrupamiento y limpieza por comunas
+    datos %>%
+      group_by(PERIODO, MES, DIA, NOMBRE_COM) %>%
+      summarise(ACCIDENTES = n()) -> train
+    colnames(train) <- c('ANO', 'MES', 'DIA', 'COMUNA', 'ACCIDENTES')
+    train <- train[!(train$COMUNA %in% c('', ' ') | str_detect(train$COMUNA, 'Corregimiento')),]
+  }
   
   # Aplicacion de fechas especiales
   train$QUINCENA <- mapply(quincena, train$ANO, train$MES, train$DIA)
@@ -187,3 +192,8 @@ for (err in keys(errs)) {
   print(errs[[err]])
   print('')
 }
+
+#fec <- read.csv('fechas.csv')
+#dat <- preprocesar(fec, TRUE)
+#aran <- bosques[['Aranjuez']]
+#pred <- predict(aran, data=preprocesar(fec, TRUE))
