@@ -94,14 +94,40 @@ preprocesar <- function(datos, prediccion) {
   return(train)
 }
 
+# Funciones para separar por comunas
+sub_comuna <- function(train, comuna) {
+  return(as.data.frame(subset(train[(train$COMUNA == comuna),], select=-c(ANO, COMUNA))))
+}
+comunas <- function(train) {
+  datos <- hash()
+  
+  datos[['Aranjuez']] <- sub_comuna(train, 'Aranjuez')
+  datos[['Belen']] <- sub_comuna(train, 'Belén')
+  datos[['Buenos Aires']] <- sub_comuna(train, 'Buenos Aires')
+  datos[['Castilla']] <- sub_comuna(train, 'Castilla')
+  datos[['Doce de Octubre']] <- sub_comuna(train, 'Doce de Octubre')
+  datos[['El Poblado']] <- sub_comuna(train, 'El Poblado')
+  datos[['Guayabal']] <- sub_comuna(train, 'Guayabal')
+  datos[['La America']] <- sub_comuna(train, 'La América')
+  datos[['La Candelaria']] <- sub_comuna(train, 'La Candelaria')
+  datos[['Laureles Estadio']] <- sub_comuna(train, 'Laureles Estadio')
+  datos[['Manrique']] <- sub_comuna(train, 'Manrique')
+  datos[['Popular']] <- sub_comuna(train, 'Popular')
+  datos[['Robledo']] <- sub_comuna(train, 'Robledo')
+  datos[['San Javier']] <- sub_comuna(train, 'San Javier')
+  datos[['Santa Cruz']] <- sub_comuna(train, 'Santa Cruz')
+  datos[['Villa Hermosa']] <- sub_comuna(train, 'Villa Hermosa')
+  
+  return(datos)
+}
+
 # Funcion para entrenamiento y seleccion de modelos
 modelo <- function(entrenamiento, validacion) {
   set.seed(123456789)
   
   grid <- expand.grid(
-    ntrees = seq(10, 150, by=10),
-    mtry = seq(4, 10, by=2)#,
-    #max_depth = seq(10, 100, 10)
+    ntrees = seq(10, 300, by=10)#,
+    #mtry = seq(2, 5, by=1)
   )
   
   min_mse <- 500
@@ -111,9 +137,8 @@ modelo <- function(entrenamiento, validacion) {
     rf <- ranger(
       formula = ACCIDENTES ~ .,
       data = entrenamiento,
-      num.trees = grid$ntrees[i],
-      mtry = grid$mtry[i]#,
-      #max.depth = grid$max_depth[i]
+      num.trees = grid$ntrees[i]#,
+      #mtry = grid$mtry[i]
     )
     
     pred <- predict(rf, data=validacion)
@@ -143,28 +168,9 @@ errores <- function(modelo, entrenamiento, validacion) {
   return(c(train_err, val_err, variacion))
 }
 
-# Funcion para separar por comunas
-comunas <- function(train) {
-  datos <- hash()
+# Funcion para preparar el modelo
+preparar <- function() {
   
-  datos[['Aranjuez']] <- as.data.frame(subset(train[(train$COMUNA == 'Aranjuez'),], select=-c(ANO, COMUNA)))
-  datos[['Belen']] <- as.data.frame(subset(train[(train$COMUNA == 'Belén'),], select=-c(ANO, COMUNA)))
-  datos[['Buenos Aires']] <- as.data.frame(subset(train[(train$COMUNA == 'Buenos Aires'),], select=-c(ANO, COMUNA)))
-  datos[['Castilla']] <- as.data.frame(subset(train[(train$COMUNA == 'Castilla'),], select=-c(ANO, COMUNA)))
-  datos[['Doce de Octubre']] <- as.data.frame(subset(train[(train$COMUNA == 'Doce de Octubre'),], select=-c(ANO, COMUNA)))
-  datos[['El Poblado']] <- as.data.frame(subset(train[(train$COMUNA == 'El Poblado'),], select=-c(ANO, COMUNA)))
-  datos[['Guayabal']] <- as.data.frame(subset(train[(train$COMUNA == 'Guayabal'),], select=-c(ANO, COMUNA)))
-  datos[['La America']] <- as.data.frame(subset(train[(train$COMUNA == 'La América'),], select=-c(ANO, COMUNA)))
-  datos[['La Candelaria']] <- as.data.frame(subset(train[(train$COMUNA == 'La Candelaria'),], select=-c(ANO, COMUNA)))
-  datos[['Laureles Estadio']] <- as.data.frame(subset(train[(train$COMUNA == 'Laureles Estadio'),], select=-c(ANO, COMUNA)))
-  datos[['Manrique']] <- as.data.frame(subset(train[(train$COMUNA == 'Manrique'),], select=-c(ANO, COMUNA)))
-  datos[['Popular']] <- as.data.frame(subset(train[(train$COMUNA == 'Popular'),], select=-c(ANO, COMUNA)))
-  datos[['Robledo']] <- as.data.frame(subset(train[(train$COMUNA == 'Robledo'),], select=-c(ANO, COMUNA)))
-  datos[['San Javier']] <- as.data.frame(subset(train[(train$COMUNA == 'San Javier'),], select=-c(ANO, COMUNA)))
-  datos[['Santa Cruz']] <- as.data.frame(subset(train[(train$COMUNA == 'Santa Cruz'),], select=-c(ANO, COMUNA)))
-  datos[['Villa Hermosa']] <- as.data.frame(subset(train[(train$COMUNA == 'Villa Hermosa'),], select=-c(ANO, COMUNA)))
-  
-  return(datos)
 }
 
 # Carga de datos
@@ -172,8 +178,8 @@ tr <- read.csv('uni.csv', sep=';')
 val <- read.csv('validacion_uni.csv', sep=';')
 
 # Pre-procesamiento
-entr <- preprocesar(tr)
-valid <- preprocesar(val)
+entr <- preprocesar(tr, FALSE)
+valid <- preprocesar(val, FALSE)
 
 # Separacion por comunas
 entrenamiento <- comunas(entr)
@@ -187,11 +193,8 @@ for (comuna in keys(entrenamiento)) {
   errs[[comuna]] <- errores(bosques[[comuna]], entrenamiento[[comuna]], validacion[[comuna]])
 }
 
-for (err in keys(errs)) {
-  print(err)
-  print(errs[[err]])
-  print('')
-}
+# Guardado de los modelos en un archivo
+save(bosques, file='bosques.RData')
 
 #fec <- read.csv('fechas.csv')
 #dat <- preprocesar(fec, TRUE)
