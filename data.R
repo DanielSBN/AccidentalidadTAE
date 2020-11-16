@@ -168,11 +168,6 @@ errores <- function(modelo, entrenamiento, validacion) {
   return(c(train_err, val_err, variacion))
 }
 
-# Funcion para preparar el modelo
-preparar <- function() {
-  
-}
-
 # Carga de datos
 tr <- read.csv('uni.csv', sep=';')
 val <- read.csv('validacion_uni.csv', sep=';')
